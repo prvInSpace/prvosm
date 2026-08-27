@@ -10,6 +10,25 @@ from prvosm.models.way import Way
 
 
 class OsmChange(BaseModel):
+    """Represents the changes made by a specific changeset
+
+    Attributes
+    ----------
+    created : list[Node | Way | Relation]
+        List of all of the elements created by the changeset
+    modified : list[Node | Way | Relation]
+        List of all of the elements modified by the changeset
+    deleted : list[Node | Way | Relation]
+        List of all of the elements deleted by the changeset
+
+    Notes
+    -----
+    The osmChange format is only available in XML, so this object first parses
+    that XML document and then returns a cleaned up version that is based
+    on the normal Pydantic BaseModel. All XML types used in the initial parsing
+    are effectively duplicates of those found elsewhere.
+    """
+
     created: list[Node | Way | Relation] = Field(default_factory=list)
     modified: list[Node | Way | Relation] = Field(default_factory=list)
     deleted: list[Node | Way | Relation] = Field(default_factory=list)
@@ -37,11 +56,14 @@ class BaseXmlElement[T](BaseXmlModel):
     changeset: int = attr()
     timestamp: datetime = attr()
     user: str = attr()
+    uid: int = attr()
 
     def to_base_type(self) -> T: ...
 
 
-class XmlNode(BaseXmlElement, tag="node"):
+class XmlNode(BaseXmlElement[Node], tag="node"):
+    lat: float = attr()
+    lon: float = attr()
     tags: list[XmlTag] = element(tag="tag", default_factory=list)
 
     def to_base_type(self) -> Node:
@@ -54,7 +76,7 @@ class XmlNode(BaseXmlElement, tag="node"):
         )
 
 
-class XmlWay(BaseXmlElement, tag="way"):
+class XmlWay(BaseXmlElement[Way], tag="way"):
     nodes: list[XmlNodeReference] = element()
     tags: list[XmlTag] = element(tag="tag", default_factory=list)
 
@@ -69,7 +91,7 @@ class XmlWay(BaseXmlElement, tag="way"):
         )
 
 
-class XmlRelation(BaseXmlElement, tag="relation"):
+class XmlRelation(BaseXmlElement[Relation], tag="relation"):
     members: list[XmlMember] = element()
     tags: list[XmlTag] = element(tag="tag", default_factory=list)
 

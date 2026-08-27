@@ -11,3 +11,5 @@ wheels/
 
 # Cache file
 __cache__
+site/
+public/

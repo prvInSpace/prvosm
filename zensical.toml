@@ -1,0 +1,35 @@
+[project]
+site_name = "Preben's OSM Library (prvosm)"
+site_url = "https://prvInSpace.github.io/prvosm/"
+site_description = "A Python library for doing useful things."
+
+repo_name = "prvinspace/prvosm"
+repo_url = "https://codeberg.org/prvinspace/prvosm"
+
+nav = [
+    { "Home" = "index.md" },
+    { "Getting Started" = "getting-started.md" },
+    { "API Reference" = [
+        { "OSMApi" = "api.md" },
+        { "Models" = [
+            { "Changeset" = "models/changeset.md" },
+            { "Node" = "models/node.md" },
+            { "Note" = "models/note.md" },
+            { "Relation" = "models/relation.md" },
+            { "User" = "models/user.md" },
+            { "Way" = "models/way.md" },
+        ] },
+    ] },
+]
+
+[project.theme]
+features = ["content.code.copy"]
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["src"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+show_source = false
+docstring_style = "numpy"
+scoped_crossrefs = true
+relative_crossrefs = true

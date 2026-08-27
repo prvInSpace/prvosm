@@ -8,10 +8,10 @@ from prvosm.models.node import Node
 
 
 class Way(Element):
-    """Represents a single way (series of nodes) in the OSM database
+    """Represents a single way (series of nodes) in the OSM database.
 
     A way may be closed (i.e a building, loop, etc.) or open (road).
-    To construct the full geometry, a full way is required (see `fetch_full`)
+    To construct the full geometry, a full way is required (see [`fetch_full`][.fetch_full]).
     """
 
     type: Literal["way"] = "way"
@@ -19,17 +19,22 @@ class Way(Element):
 
     @property
     def is_closed(self) -> bool:
-        """Helper property to check if a way is closed or not
+        """Helper property to check if a way is closed or not.
 
         This can also be determined by fetching the full way, construction the geometry,
-        and checking the is_closed property on the geometry
+        and checking the is_closed property on the geometry.
         """
         return self.nodes[0] == self.nodes[-1]
 
     def fetch_full(self) -> "FullWay":
-        """Fetches the full version of the way with additional information about child nodes
+        """Fetches the full version of the way with additional information about child nodes.
 
         Required for certain features such as geometry.
+
+        Returns
+        -------
+        FullWay
+            The way with additional information about the nodes that make up the way.
         """
         return self._require_api().fetch_full_way(self.id)
 
@@ -44,7 +49,7 @@ class FullWay(Way):
     Notes
     ----
     In reality this object only contains a list of elements, but to make it
-    easier to use, it populates itself with the contents of the relation itself
+    easier to use, it populates itself with the contents of the way itself
     (which is always one of the items in the list of elements)
     """
 
@@ -53,7 +58,13 @@ class FullWay(Way):
 
     @property
     def geometry(self) -> LineString:
-        """Constructs the geometry of the way"""
+        """Constructs the geometry of the way
+
+        Returns
+        -------
+        LineString
+            A line string representing the way.
+        """
         node_geometries = {
             node.id: Point(node.lon, node.lat)
             for node in self.elements

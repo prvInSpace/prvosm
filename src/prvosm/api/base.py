@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING, Protocol, Sequence
 
 from shapely.geometry import Polygon
 
+from prvosm.models.osmchange import OsmChange
+
 if TYPE_CHECKING:
     from prvosm.models.changeset import Changeset
     from prvosm.models.node import Node
@@ -13,7 +15,7 @@ if TYPE_CHECKING:
 
 class OSMClient(Protocol):
     def fetch_changeset(self, id: int) -> Changeset: ...
-    def fetch_changeset_changes(self, id: int) -> None: ...
+    def fetch_changeset_changes(self, id: int) -> OsmChange: ...
     def fetch_changeset_comments(self) -> None: ...
 
     # Node related functions

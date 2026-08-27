@@ -15,6 +15,7 @@ from prvosm.models.base import Bindable
 from prvosm.models.changeset import Changeset
 from prvosm.models.node import Node
 from prvosm.models.note import Note
+from prvosm.models.osmchange import OsmChange, XmlOsmChange
 from prvosm.models.relation import FullRelation, Relation
 from prvosm.models.user import User
 from prvosm.models.way import FullWay, Way
@@ -160,6 +161,18 @@ class OSMApi(OSMClient):
     ## ------------------- Changeset related functions ------------------------------
 
     def fetch_changeset(self, id: int) -> Changeset:
+        """Fetches data about a specific changeset.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the changeset to fetch.
+
+        Returns
+        -------
+        Changeset
+            Data about the requested changeset.
+        """
         object_id = f"c_{id}"
         if cached := self.cache.get_cached(object_id):
             data = json.loads(cached)
@@ -173,8 +186,35 @@ class OSMApi(OSMClient):
             self.cache.set_cached(object_id, json.dumps(data))
         return self._bind_api(Changeset.model_validate(data))
 
-    def fetch_changeset_changes(self, id: int) -> None:
-        raise NotImplementedError
+    def fetch_changeset_changes(self, id: int) -> OsmChange:
+        """Fetches the changes made by a changeset.
+
+        This is returned in the osmChamge XML format, however, it is converted
+        to a regular type internally and returned.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the changeset to fetch the changes for.
+
+        Returns
+        -------
+        OsmChange
+            An object containing information about the elements that was changed,
+            modified, or created by the specified changeset.
+        """
+        object_id, end_point = f"c_{id}_changes", f"/changeset/{id}/download"
+        data = self.cache.get_cached(object_id)
+        if not data:
+            url = f"{self.base_api_url}{end_point}"
+            logger.info(f"Fetching data from {url}")
+            resp = requests.get(url, headers=self.headers)
+            resp.raise_for_status()
+            data = resp.text
+            self.cache.set_cached(object_id, data)
+
+        xml_data = XmlOsmChange.from_xml(bytes(data, encoding="utf-8"))
+        return xml_data.to_base_type()
 
     def fetch_changeset_comments(self) -> None:
         raise NotImplementedError
@@ -182,33 +222,110 @@ class OSMApi(OSMClient):
     ## ------------------- Node related functions ------------------------------
 
     def fetch_node(self, id: int) -> Node:
-        """Fetches a single node from the API"""
+        """Fetches a single node from the API.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the node to fetch.
+
+        Returns
+        -------
+        Node
+            A Node object containing information about the requested node.
+        """
         object_id, end_point = f"n_{id}", f"/node/{id}.json"
         data = self._fetch_single_element(object_id, end_point)
         return self._bind_api(Node.model_validate(data))
 
     def fetch_nodes(self, ids: Sequence[str | int]) -> list[Node]:
+        """Fetches data for multiple nodes at once.
+
+        Both IDs and IDs with version specifiers are allowed.
+
+        If a node already exists in cache, the node with be read from there
+        rather than fetched from the API. All nodes requested are cached.
+
+        Parameters
+        ----------
+        ids : list[int | str]
+            The list of the nodes to fetch. Can either be the pure integer ID
+            of a node, or with an additional version specifier at the end
+            (e.g. `1234` or `1234v5`).
+
+        Returns
+        -------
+        list[Node]
+            A list of containing the nodes that were requested.
+        """
         return self._multi_fetch_elements(Node, "nodes", ids)
 
     def fetch_node_history(self, id: int) -> list[Node]:
-        """Fetches a every version of a node from the API"""
+        """Fetches a every version of a node from the API.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the node to fetch the history for.
+
+        Returns
+        -------
+        list[Node]
+            A list of all the versions of the specified node.
+        """
         object_id, end_point = f"n_{id}_history", f"/node/{id}/history.json"
         data = self._fetch_multiple_elements(object_id, end_point)
         return [self._bind_api(Node.model_validate(obj)) for obj in data]
 
     def fetch_node_version(self, id: int, version: int) -> Node:
-        """Fetches a single version of a node from the API"""
+        """Fetches a single version of a node from the API.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the node to fetch
+        version : int
+            The version of the node to fetch
+
+        Returns
+        -------
+        Node
+            The version of the node that was requested.
+        """
         object_id, end_point = f"n_{id}_v{version}", f"/node/{id}/{int}.json"
         data = self._fetch_single_element(object_id, end_point)
         return self._bind_api(Node.model_validate(data))
 
     def fetch_ways_for_node(self, id: int) -> list[Way]:
-        """Fetches all the ways that a node is part of from the API"""
+        """Fetches all the ways that a node is part of.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the node.
+
+        Returns
+        -------
+        list[Way]
+            A list of the ways the node is part of, if any.
+        """
         object_id, end_point = f"n_{id}_ways", f"/node/{id}/ways.json"
         data = self._fetch_multiple_elements(object_id, end_point)
         return [self._bind_api(Way.model_validate(obj)) for obj in data]
 
     def fetch_relations_for_node(self, id: int) -> list[Relation]:
+        """Fetches all the relations that a node is part of.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the node.
+
+        Returns
+        -------
+        list[Relation]
+            A list of the relations the node is part of, if any.
+        """
         object_id, end_point = f"n_{id}_relations", f"/node/{id}/relations.json"
         data = self._fetch_multiple_elements(object_id, end_point)
         return [self._bind_api(Relation.model_validate(obj)) for obj in data]
@@ -216,6 +333,19 @@ class OSMApi(OSMClient):
     ## ------------------- Note related functions ------------------------------
 
     def fetch_note(self, id: int) -> Note:
+        """Fetches details about a specific note
+
+        Parameters
+        ----------
+        id : int
+            The ID of the note.
+
+        Returns
+        -------
+        Note
+            The requested note.
+        """
+
         data = self._fetch_from_cache_or_api(f"note_{id}", f"/notes/{id}.json")
         feature = json.loads(data)["features"][0]
         note_data = feature["properties"]
@@ -242,6 +372,11 @@ class OSMApi(OSMClient):
             The number of days a note can have been closed for before it is excluded from
             the results. Passing 0 makes the function only return open notes. If not provided
             the default for the API is used (7 days).
+
+        Returns
+        -------
+        list[Note]
+            A list with all the notes found capped at the limit.
         """
         params = {"bbox": ",".join([str(coord) for coord in bbox.bounds])}
         if limit is not None:
@@ -270,29 +405,112 @@ class OSMApi(OSMClient):
     ## ------------------- Relations related functions ------------------------------
 
     def fetch_relation(self, id: int) -> Relation:
+        """Fetches data about a specific relation.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the relation.
+
+        Returns
+        -------
+        Relation
+            The relation requested.
+        """
         object_id, end_point = f"r_{id}", f"/relation/{id}.json"
         data = self._fetch_single_element(object_id, end_point)
         return self._bind_api(Relation.model_validate(data))
 
     def fetch_relations(self, ids: Sequence[str | int]) -> list[Relation]:
+        """Fetches data for multiple relations at once.
+
+        Both IDs and IDs with version specifiers are allowed.
+
+        If a relation already exists in cache, the relation with be read from there
+        rather than fetched from the API. All relations requested are cached.
+
+        Parameters
+        ----------
+        ids : list[int | str]
+            The list of the relations to fetch. Can either be the pure integer ID
+            of a relation, or with an additional version specifier at the end
+            (e.g. `1234` or `1234v5`).
+
+        Returns
+        -------
+        list[Relation]
+            A list of containing the relations that were requested.
+        """
         return self._multi_fetch_elements(Relation, "relations", ids)
 
     def fetch_relation_history(self, id: int) -> list[Relation]:
+        """Fetches all versions of a relation.
+
+        Parameters
+        ----------
+        id : int
+            The relation to request the history for.
+
+        Returns
+        -------
+        list[Relation]
+            A list containing all the versions of the relation.
+        """
         object_id, end_point = f"r_{id}_history", f"/relation/{id}/history.json"
         data = self._fetch_multiple_elements(object_id, end_point)
         return [self._bind_api(Relation.model_validate(obj)) for obj in data]
 
     def fetch_relation_version(self, id: int, version: int) -> Relation:
+        """Fetches a specific version of a relation.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the relation.
+        version : int
+            The version of the relation to fetch.
+
+        Returns
+        -------
+        Relation
+            The version of the relation requested.
+        """
         object_id, end_point = f"r_{id}_v{version}", f"/relation/{id}/{version}.json"
         data = self._fetch_single_element(object_id, end_point)
         return self._bind_api(Relation.model_validate(data))
 
     def fetch_relations_for_relation(self, id: int) -> list[Relation]:
+        """Fetches relations that the relation is a member of (parent relations).
+
+        Parameters
+        ----------
+        id : int
+            The ID of the relation to fetch the relations for.
+
+        Returns
+        -------
+        list[Relation]
+            A list with all the parent relations that the relation is a member of, if any.
+        """
         object_id, end_point = f"r_{id}_relations", f"/relation/{id}/relations.json"
         data = self._fetch_multiple_elements(object_id, end_point)
         return [self._bind_api(Relation.model_validate(obj)) for obj in data]
 
     def fetch_full_relation(self, id: int) -> FullRelation:
+        """Fetches the relation in addition to information about all the direct members.
+
+        Required for certain features such as geometry.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the relation to fetch.
+
+        Returns
+        -------
+        FullRelation
+            The relation with additional information about direct members.
+        """
         object_id, end_point = f"r_{id}_full", f"/relation/{id}/full.json"
         data = self._fetch_multiple_elements(object_id, end_point)
         main_rel = [e for e in data if e["id"] == id][0]
@@ -302,6 +520,18 @@ class OSMApi(OSMClient):
     ## ------------------- User related functions ------------------------------
 
     def fetch_user(self, id: int) -> User:
+        """Fetches details for a specific user
+
+        Parameters
+        ----------
+        id : int
+            The ID of the user to fetch
+
+        Returns
+        -------
+        User
+            A user object containing information about the user
+        """
         object_id, end_point = f"u_{id}", f"/user/{id}.json"
         if cached := self.cache.get_cached(object_id):
             data = json.loads(cached)
@@ -314,29 +544,112 @@ class OSMApi(OSMClient):
     ## ------------------- Way related functions -------------------------------
 
     def fetch_way(self, id: int) -> Way:
+        """Fetches information about a way.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the way to fetch.
+
+        Returns
+        -------
+        Way
+            Object containing information about the requested way.
+        """
         object_id, end_point = f"w_{id}", f"/way/{id}.json"
         data = self._fetch_single_element(object_id, end_point)
         return self._bind_api(Way.model_validate(data))
 
     def fetch_ways(self, ids: Sequence[str | int]) -> list[Way]:
+        """Fetches data for multiple ways at once.
+
+        Both IDs and IDs with version specifiers are allowed.
+
+        If a way already exists in cache, the way with be read from there
+        rather than fetched from the API. All ways requested are cached.
+
+        Parameters
+        ----------
+        ids : list[int | str]
+            The list of the ways to fetch. Can either be the pure integer ID
+            of a way, or with an additional version specifier at the end
+            (e.g. `1234` or `1234v5`).
+
+        Returns
+        -------
+        list[Way]
+            A list of containing the ways that were requested.
+        """
         return self._multi_fetch_elements(Way, "ways", ids)
 
     def fetch_way_history(self, id: int) -> list[Way]:
+        """Fetches all the version of a way.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the Way to fetch all the versions for.
+
+        Returns
+        -------
+        list[Way]
+            A list containing all the versions of the requested way.
+        """
         object_id, end_point = f"w_{id}_history", f"/way/{id}/history.json"
         data = self._fetch_multiple_elements(object_id, end_point)
         return [self._bind_api(Way.model_validate(obj)) for obj in data]
 
     def fetch_way_version(self, id: int, version: int) -> Way:
+        """Fetch a specific version of a way.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the way to fetch.
+        version : int
+            The version of the way to fetch.
+
+        Returns
+        -------
+        Way
+            The version of the way that was requested.
+        """
         object_id, end_point = f"w_{id}_v{version}", f"/way/{id}/{version}.json"
         data = self._fetch_single_element(object_id, end_point)
         return self._bind_api(Way.model_validate(data))
 
     def fetch_relations_for_way(self, id: int) -> list[Relation]:
+        """Fetch relations that the way is a part of.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the way to fetch the relations for.
+
+        Returns
+        -------
+        list[Relation]
+            A list of all of the relations the way is a member of, if any.
+        """
         object_id, end_point = f"w_{id}_relations", f"/way/{id}/relations.json"
         data = self._fetch_multiple_elements(object_id, end_point)
         return [self._bind_api(Relation.model_validate(obj)) for obj in data]
 
     def fetch_full_way(self, id: int) -> FullWay:
+        """Fetches the way in addition to information about all the nodes.
+
+        Required for certain features such as geometry.
+
+        Parameters
+        ----------
+        id : int
+            The ID of the way to fetch.
+
+        Returns
+        -------
+        FullWay
+            The way with additional information about nodes.
+        """
         object_id, end_point = f"w_{id}_full", f"/way/{id}/full.json"
         data = self._fetch_multiple_elements(object_id, end_point)
         main_way = [e for e in data["elements"] if e["id"] == id][0]

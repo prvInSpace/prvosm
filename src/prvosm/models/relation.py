@@ -10,22 +10,70 @@ from prvosm.models.way import Way
 
 
 class Member(BaseModel):
+    """Represents a membership in a relation
+
+    Attributes
+    ----------
+    type : str
+        The type of the element (node, way, or relation)
+    ref : int
+        The ID of the element
+    role : str
+        The role of the element in the relation
+    """
+
     type: str
     ref: int
     role: str
 
 
 class Relation(Element):
+    """Represents a relation with a collection of members.
+
+    Together with nodes and ways it represents one of the three main
+    OSM element types. As such, it inherits all attributes and methods from [`Element`][prvosm.models.base.Element].
+
+    A relation is effectively a collection of nodes, ways, and relations, where each member has a role within
+    the relationship. A membership of a relation is represented by the [`Member`][..Member] class.
+
+    Attributes
+    ----------
+    type : str
+        The OSM element type. Always "relation".
+    members : list[Member]
+        A list of the members of the relation.
+
+    """
+
     type: Literal["relation"] = "relation"
     members: list[Member]
 
     def fetch_full(self) -> "FullRelation":
+        """Fetches the relation, but with additional information about member elements.
+
+        This is required for certain operations such as constructing the geometry of the relation.
+
+        Returns
+        -------
+        FullRelation
+            The relation, but with additional information about member elements.
+        """
         return self._require_api().fetch_full_relation(self.id)
 
 
 class FullRelation(Relation):
-    """
-    Note: In reality this object only contains a list of elements, but to make it
+    """The same as relation, but with additional information about member elements.
+
+    This is required for certain operations such as constructing the geometry of the relation.
+
+    Attributes
+    ----------
+    elements : list[Node | Way | Relation]
+        List of the elements related to this relation, including the relation itself.
+
+    Note
+    ----
+    In reality this object only contains a list of elements, but to make it
     easier to use, it populates itself with the contents of the relation itself
     (which is always one of the items in the list of elements)
     """
@@ -33,8 +81,18 @@ class FullRelation(Relation):
     elements: list[Annotated[Union[Node, Way, Relation], Field(discriminator="type")]]
 
     def outer_geometry(self) -> MultiPolygon:
-        # Fetch the main information from the relation
-        # (there might be multiple relations, so it is easier to find the relation by filtering)
+        """Tries to construct the outer geometry of the relation
+
+        Assuming that the relation has ways with the role "outer", the function tries
+        to construct a MultiPolygon from those ways.
+        The function does not assume that the ways are sorted properly.
+
+        Returns
+        -------
+        MultiPolygon
+            A MultiPolygon representing the outer geometry of the relation
+        """
+
         # Find the ways that make up the outer boundary
         outer_ways = [
             member
@@ -113,7 +171,7 @@ class FullRelation(Relation):
 
             if not nodes[0] == nodes[-1]:
                 logger.warning(
-                    "Failed to create a loop",
+                    f"Failed to create a loop (Started at n:{nodes[0]}, Ended at n:{nodes[-1]})",
                 )
 
             return Polygon(nodes_coordinates[node] for node in nodes)
