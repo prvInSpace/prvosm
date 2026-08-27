@@ -63,7 +63,7 @@ class Node(Element):
         """
         return self._require_api().fetch_node_version(self.id, version)
 
-    def fetch_relations(self) -> list[Relation]:
+    def fetch_relations(self) -> list["Relation"]:
         """Fetches the relations that the node is a member of
 
         Returns
@@ -73,7 +73,7 @@ class Node(Element):
         """
         return self._require_api().fetch_relations_for_node(self.id)
 
-    def fetch_ways(self) -> list[Way]:
+    def fetch_ways(self) -> list["Way"]:
         """Fetches the ways that the node is a member of
 
         Returns

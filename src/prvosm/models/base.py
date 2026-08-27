@@ -1,3 +1,4 @@
+from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
 class Bindable:
     _api: OSMClient | None = PrivateAttr(default=None)
 
-    def _require_api(self) -> "OSMClient":
+    def _require_api(self) -> OSMClient:
         if self._api is None:
             raise RuntimeError("This object is not associated with an OSM client")
         return self._api

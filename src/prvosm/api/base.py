@@ -1,13 +1,13 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, Sequence
 
 from shapely.geometry import Polygon
-
-from prvosm.models.osmchange import OsmChange
 
 if TYPE_CHECKING:
     from prvosm.models.changeset import Changeset
     from prvosm.models.node import Node
     from prvosm.models.note import Note
+    from prvosm.models.osmchange import OsmChange
     from prvosm.models.relation import FullRelation, Relation
     from prvosm.models.user import User
     from prvosm.models.way import FullWay, Way
