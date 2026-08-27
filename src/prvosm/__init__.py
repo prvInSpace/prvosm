@@ -1,11 +1,11 @@
 import json
+import logging
 import re
 from importlib.metadata import version
 from pathlib import Path
 from typing import Optional, Sequence
 
 import requests
-from loguru import logger
 from pydantic import BaseModel
 from shapely.geometry.base import BaseGeometry
 
@@ -21,6 +21,8 @@ from prvosm.models.user import User
 from prvosm.models.way import FullWay, Way
 
 DEFAULT_CACHE_LOCATION = Path(__file__).parent / "__cache__" / "osm_cache.db"
+
+logger = logging.getLogger(__name__)
 
 
 class OSMApi(OSMClient):

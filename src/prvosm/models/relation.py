@@ -1,12 +1,14 @@
 from typing import Annotated, Literal, Union
 
-from loguru import logger
+import logging
 from pydantic import BaseModel, Field
 from shapely import MultiPolygon, Point, Polygon
 
 from prvosm.models.base import Element
 from prvosm.models.node import Node
 from prvosm.models.way import Way
+
+logger = logging.getLogger("__name__")
 
 
 class Member(BaseModel):

@@ -1,19 +1,48 @@
 [project]
 name = "prvosm"
-version = "1.0.0"
-description = "Small library for reading from the OSM API"
+version = "1.0.1"
+description = "Small library for making reading from the OSM API easy, convenient, and type-safe"
 readme = "README.md"
+license = "MIT"
 authors = [
     { name = "Preben Vangberg", email = "prv21fgt@bangor.ac.uk" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.10"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Typing :: Typed",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Programming Language :: Python :: 3.16",
+]
+keywords = [
+    "openstreetmap",
+    "osm"
+]
 dependencies = [
-    "loguru>=0.7.3",
     "pydantic>=2.13.4",
     "pydantic-xml>=2.21.1",
     "requests>=2.34.2",
     "shapely>=2.1.2",
 ]
+
+
+[project.urls]
+Homepage = "https://codeberg.org/prvinspace/prvosm"
+Documentation = "https://prvinspace.github.io/prvosm/"
+Repository = "https://codeberg.org/prvinspace/prvosm"
+Issues = "https://codeberg.org/prvinspace/prvosm/issues"
+
 
 [build-system]
 requires = ["uv_build>=0.11.6,<0.12.0"]
