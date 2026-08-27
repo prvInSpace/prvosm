@@ -10,19 +10,9 @@ A simple Python library that makes accessing data from the OSM API dead easy and
 - **Cached:** Following good practice, objects and responses are stored in a sqlite cache.
 - **Almost all read end-points added:** There are a handful that I haven't got around to implementing, but most are implemented.
 
-## Roadmap / Ideas
+## Documentation
 
-I got other scripts that I use with this codebase that could be implemented / folded into it. If you have any ideas please let me know!
-
-For the time being, the things I'd like to do:
-- Add all the remaining documentation and testing to prepare for a v1.0 release
-- Add Github actions to build documentation and push new versions to PyPI
-- Add missing helper functions on different objects
-
-Then once that is done some ideas I might have:
-- "Historical" API to make fetching and parsing larger histories / PBFs easier (I'm currently using this to analyse changesets)
-
-I also have a bunch of code for fetching data from OS OpenData etc. but I feel that is more suitable for a separate library.
+For documentation, roadmaps, etc. see [prvinspace.github.io/prvosm/](https://prvinspace.github.io/prvosm/).
 
 ## Maintainer
 
