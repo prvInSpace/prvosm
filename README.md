@@ -1,4 +1,8 @@
 # Preben OSM's Library (prvosm)
+![PyPI - Version](https://img.shields.io/pypi/v/prvosm)
+![License](https://img.shields.io/github/license/prvInSpace/prvosm)
+[![Release CI](https://github.com/prvInSpace/prvosm/actions/workflows/release.yml/badge.svg)](https://github.com/prvInSpace/prvosm/actions/workflows/release.yml)
+[![Documentation CI](https://github.com/prvInSpace/prvosm/actions/workflows/docs.yml/badge.svg)](https://github.com/prvInSpace/prvosm/actions/workflows/docs.yml)
 
 A simple Python library that makes accessing data from the OSM API dead easy and convenient.
 
