@@ -1,6 +1,6 @@
 [project]
 name = "prvosm"
-version = "1.0.1"
+version = "1.0.2"
 description = "Small library for making reading from the OSM API easy, convenient, and type-safe"
 readme = "README.md"
 license = "MIT"
