@@ -18,11 +18,13 @@ Check out the *getting started* guide here: [Getting started](getting-started.md
 I got other scripts that I use with this codebase that could be implemented / folded into it. If you have any ideas please let me know!
 
 For the time being, the things I'd like to do:
+
 - Add more testing
 - Add missing helper functions on different objects
 - Add helper functions to read data from [overpass](https://codeberg.org/mvexel/overpass-api-python-wrapper) and parse them into concrete types.
 
 Then once that is done some ideas I might have:
+
 - "Historical" API to make fetching and parsing larger histories / PBFs easier (I'm currently using this to analyse changesets)
 
 I also have a bunch of code for fetching data from OS OpenData etc. but I feel that is more suitable for a separate library. Happy to hear thoughts though.
