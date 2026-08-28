@@ -247,6 +247,12 @@ class OSMApi(OSMClient):
         -------
         list[Changeset]
             A list of changesets matching the provided search queries.
+
+        Notes
+        -----
+        The API end-point for this function is quite messy, especially the time-based filtering.
+        The parameters have different types and names to that of the end-point, but the hope is that
+        this makes it easier to understand and use.
         """
         params = {}
         if bbox:
