@@ -1,10 +1,12 @@
+from datetime import datetime
+from enum import StrEnum
 import json
 import logging
 import re
 from importlib.metadata import version
 from pathlib import Path
-from typing import Optional, Sequence
-
+from typing import Literal, Optional, Sequence
+from urllib.parse import quote
 import requests
 from pydantic import BaseModel
 from shapely.geometry.base import BaseGeometry
@@ -23,6 +25,12 @@ from prvosm.models.way import FullWay, Way
 DEFAULT_CACHE_LOCATION = Path(__file__).parent / "__cache__" / "osm_cache.db"
 
 logger = logging.getLogger(__name__)
+
+
+class ChangesetStatus(StrEnum):
+    ALL = "all"
+    OPEN = "open"
+    CLOSED = "closed"
 
 
 class OSMApi(OSMClient):
@@ -187,6 +195,107 @@ class OSMApi(OSMClient):
             data = json.loads(resp)["changeset"]
             self.cache.set_cached(object_id, json.dumps(data))
         return self._bind_api(Changeset.model_validate(data))
+
+    def fetch_changesets(
+        self,
+        # Bbox based filtering
+        bbox: BaseGeometry | None = None,
+        # User based filtering
+        user: int | None = None,
+        display_name: str | None = None,
+        # Time based filtering
+        closed_after: datetime | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
+        # filtering based on status
+        status: ChangesetStatus = ChangesetStatus.ALL,
+        # ID based filtering
+        changesets: list[int] | None = None,
+        # Output control
+        order: Literal["newest", "oldest"] | None = None,
+        limit: int | None = None,
+    ) -> list[Changeset]:
+        """Searches for and fetches changesets based on various criteria.
+
+        Parameters
+        ----------
+        bbox : BaseGeometry | None = None,
+            Uses the passed geometry to create a minimum bounding box that is used as search area.
+            Note changesets might fall outside the actual boundaries of the geometry.
+        user : int | None = None,
+            Filters changesets to those of the user ID provided.
+        display_name : str | None = None,
+            Filters changesets based on the provided display name of a user.
+        closed_after : datetime | None = None,
+            Filters
+        created_after : datetime | None = None,
+            Filters changesets to those created at or after the specified time.
+        created_before : datetime | None = None,
+            Filters changesets to those created before the specified time.
+            Has no effect unless either `closed_after`  or `created_after` is also set.
+        status : ChangesetStatus = ChangesetStatus.ALL,
+            Filters changesets so that only those with the provided status is returned.
+        changesets: list[int] | None = None,
+            Filters changesets to only those that matches the provided IDs.
+        order: Literal["newest", "oldest"] | None = None,
+            The order of the returned items. The default is "newest". The order can be reversed by setting "oldest",
+            but note that "oldest" can not be used together with time-based filtering.
+        limit: int | None = None,
+            Limits the number of responses returned. The default is 100 (set by the API).
+
+        Returns
+        -------
+        list[Changeset]
+            A list of changesets matching the provided search queries.
+        """
+        params = {}
+        if bbox:
+            params["bbox"] = ",".join([str(c) for c in bbox.bounds])
+        if user is not None:
+            params["user"] = str(user)
+        if display_name:
+            params["display_name"] = quote(display_name)
+
+        # Sorting by changeset status
+        if status == ChangesetStatus.OPEN:
+            params["open"] = "true"
+        elif status == ChangesetStatus.CLOSED:
+            params["closed"] = "true"
+
+        # Time sorting by closed date
+        if closed_after and created_before:
+            params["time"] = f"{closed_after.isoformat()},{created_before.isoformat()}"
+        elif closed_after:
+            params["time"] = f"{closed_after.isoformat()}"
+
+        # Time sorting by created time
+        if created_after:
+            params["from"] = created_after.isoformat()
+            if created_before is not None:
+                params["to"] = created_before.isoformat()
+
+        if created_before and (not closed_after and not created_after):
+            logger.warning(
+                "Setting 'created_before' has no effect unless 'closed_after' or 'created_after' is set."
+            )
+
+        if changesets:
+            params["changesets"] = ",".join([str(cs) for cs in changesets])
+        if limit is not None:
+            params["limit"] = str(limit)
+        if order:
+            params["order"] = order
+
+        url = f"{self.base_api_url}/changesets.json"
+        logger.info(f"Fetching data from {url}")
+        resp = requests.get(url, headers=self.headers, params=params)
+        resp.raise_for_status()
+        print(resp.text)
+
+        return [
+            self._bind_api(Changeset.model_validate(cs))
+            for cs in resp.json()["changesets"]
+        ]
 
     def fetch_changeset_changes(self, id: int) -> OsmChange:
         """Fetches the changes made by a changeset.
