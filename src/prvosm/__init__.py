@@ -143,7 +143,7 @@ class OSMApi(OSMClient):
         # then we have to make the actual network call to get the data, but
         # we also need to store
         if required_ids_to_object_id:
-            url = f"{self.base_api_url}/{element_type}].json"
+            url = f"{self.base_api_url}/{element_type}.json"
             logger.info(
                 f"Fetching {len(required_ids_to_object_id)} element(s) from {url}"
             )
@@ -296,7 +296,6 @@ class OSMApi(OSMClient):
         logger.info(f"Fetching data from {url}")
         resp = requests.get(url, headers=self.headers, params=params)
         resp.raise_for_status()
-        print(resp.text)
 
         return [
             self._bind_api(Changeset.model_validate(cs))
@@ -657,6 +656,45 @@ class OSMApi(OSMClient):
             data = json.loads(resp)["user"]
             self.cache.set_cached(object_id, json.dumps(data))
         return self._bind_api(User.model_validate(data))
+
+    def fetch_users(self, ids: list[int]) -> list[User]:
+        """Fetches data for multiple users at once.
+
+        If a user already exists in cache, the user with be read from there
+        rather than fetched from the API. All users requested are cached.
+
+        Parameters
+        ----------
+        ids : list[int | str]
+            The list of the users to fetch.
+
+        Returns
+        -------
+        list[User]
+            A list of containing the users that were requested.
+        """
+        users: list[User] = []
+        required_users = []
+        for uid in ids:
+            object_id = f"u_{uid}"
+            if cached := self.cache.get_cached(object_id):
+                users.append(User.model_validate(json.loads(cached)))
+            else:
+                required_users.append(str(uid))
+
+        if required_users:
+            url = f"{self.base_api_url}/users.json"
+            logger.info(f"Fetching {len(required_users)} element(s) from {url}")
+            resp = requests.get(
+                url, headers=self.headers, params={"users": ",".join(required_users)}
+            )
+            resp.raise_for_status()
+            for user_data in resp.json()["users"]:
+                user = User.model_validate(user_data)
+                users.append(user)
+                self.cache.set_cached(f"u_{user.id}", json.dumps(user_data))
+
+        return [self._bind_api(user) for user in users]
 
     ## ------------------- Way related functions -------------------------------
 

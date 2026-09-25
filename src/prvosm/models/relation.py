@@ -123,7 +123,7 @@ class FullRelation(Relation):
         for node, connections in end_nodes.items():
             if len(connections) != 2:
                 logger.warning(
-                    f"Relation {self.id}: Node {node} has {len(connections)} connection(s)s. Since this is not 2 that implies that the boundaries of the relation is broken or incomplete."
+                    f"Relation {self.id} (v{self.version}): Node {node} has {len(connections)} connection(s)s. Since this is not 2 that implies that the boundaries of the relation is broken or incomplete."
                 )
 
         def get_nodes(way_id: int) -> list[int]:
