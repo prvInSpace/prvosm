@@ -61,7 +61,7 @@ class OSMApi(OSMClient):
         self,
         app_name: str,
         base_api_url: str = "https://api.openstreetmap.org/api/0.6",
-        cache: SqliteCache = SqliteCache(DEFAULT_CACHE_LOCATION),
+        cache: SqliteCache | None = None,
         user_agent: Optional[str] = None,
     ) -> None:
         self.base_api_url = base_api_url.removesuffix("/")
@@ -72,6 +72,8 @@ class OSMApi(OSMClient):
                 else f"{app_name.strip()} (prvosm {version('prvosm')})"
             ),
         }
+        if cache is None:
+            cache = SqliteCache(DEFAULT_CACHE_LOCATION)
         self.cache = cache
 
     def _bind_api[T](self, obj: T) -> T:
